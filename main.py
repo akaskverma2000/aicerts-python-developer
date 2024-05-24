@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
 import string
-from textblob import TextBlob
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import nltk
+
+# Download necessary NLTK data
+nltk.download('punkt')
 
 
 def load_data(file_path):
@@ -62,9 +66,9 @@ def preprocess_text(text):
     return text
 
 
-def analyze_sentiment(text):
+def analyze_sentiment_vader(text):
     """
-    Analyze the sentiment of the text using TextBlob.
+    Analyze the sentiment of the text using VADER.
 
     Args:
     text (str): Input text.
@@ -72,10 +76,11 @@ def analyze_sentiment(text):
     Returns:
     str: Sentiment label ('positive', 'negative', 'neutral').
     """
-    analysis = TextBlob(text)
-    if analysis.sentiment.polarity > 0:
+    analyzer = SentimentIntensityAnalyzer()
+    sentiment_score = analyzer.polarity_scores(text)
+    if sentiment_score['compound'] >= 0.05:
         return 'positive'
-    elif analysis.sentiment.polarity < 0:
+    elif sentiment_score['compound'] <= -0.05:
         return 'negative'
     else:
         return 'neutral'
@@ -115,7 +120,7 @@ def main(input_file, output_file, summary_file):
     # Preprocess text
     df['review'] = df['review'].apply(preprocess_text)
     # Analyze sentiment
-    df['sentiment'] = df['review'].apply(analyze_sentiment)
+    df['sentiment'] = df['review'].apply(analyze_sentiment_vader)
 
     # Create summary report
     sentiment_summary = df['sentiment'].value_counts().reset_index()
