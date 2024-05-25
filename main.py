@@ -3,6 +3,7 @@ import numpy as np
 import string
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import nltk
+import re
 
 # Download necessary NLTK data
 nltk.download('punkt')
@@ -30,6 +31,9 @@ def load_data(file_path):
     except pd.errors.ParserError:
         print("Error: The file could not be parsed.")
         return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 
 def clean_data(df):
@@ -42,16 +46,25 @@ def clean_data(df):
     Returns:
     DataFrame: Cleaned DataFrame.
     """
-    # Remove null values
-    df = df.dropna()
-    # Keep only the 'review' column
-    df = df[['review']]
-    return df
+    try:
+        # Remove null values
+        df = df.dropna()
+        # Keep only the 'review' column
+        if 'review' not in df.columns:
+            raise ValueError("The required 'review' column is missing in the input data.")
+        df = df[['review']]
+        return df
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred during data cleaning: {e}")
+        return None
 
 
 def preprocess_text(text):
     """
-    Preprocess the text by converting to lowercase and removing punctuation.
+    Preprocess the text by converting to lowercase, removing punctuation, numbers, and extra whitespace.
 
     Args:
     text (str): Input text.
@@ -59,11 +72,22 @@ def preprocess_text(text):
     Returns:
     str: Preprocessed text.
     """
-    # Convert to lowercase
-    text = text.lower()
-    # Remove punctuation
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    return text
+    try:
+        # Convert to lowercase
+        text = text.lower()
+        # Remove punctuation
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        # Remove numbers
+        text = re.sub(r'\d+', '', text)
+        # Remove extra whitespace
+        text = ' '.join(text.split())
+        return text
+    except TypeError as te:
+        print(f"TypeError: The input text is not a string: {te}")
+        return ""
+    except Exception as e:
+        print(f"An unexpected error occurred during text preprocessing: {e}")
+        return ""
 
 
 def analyze_sentiment_vader(text):
@@ -76,13 +100,17 @@ def analyze_sentiment_vader(text):
     Returns:
     str: Sentiment label ('positive', 'negative', 'neutral').
     """
-    analyzer = SentimentIntensityAnalyzer()
-    sentiment_score = analyzer.polarity_scores(text)
-    if sentiment_score['compound'] >= 0.05:
-        return 'positive'
-    elif sentiment_score['compound'] <= -0.05:
-        return 'negative'
-    else:
+    try:
+        analyzer = SentimentIntensityAnalyzer()
+        sentiment_score = analyzer.polarity_scores(text)
+        if sentiment_score['compound'] >= 0.05:
+            return 'positive'
+        elif sentiment_score['compound'] <= -0.05:
+            return 'negative'
+        else:
+            return 'neutral'
+    except Exception as e:
+        print(f"An error occurred during sentiment analysis: {e}")
         return 'neutral'
 
 
@@ -98,7 +126,7 @@ def save_to_csv(df, file_path):
         df.to_csv(file_path, index=False)
         print(f"File saved successfully at {file_path}.")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error saving file: {e}")
 
 
 def main(input_file, output_file, summary_file):
@@ -117,14 +145,30 @@ def main(input_file, output_file, summary_file):
 
     # Clean data
     df = clean_data(df)
+    if df is None:
+        return
+
     # Preprocess text
-    df['review'] = df['review'].apply(preprocess_text)
+    try:
+        df['review'] = df['review'].apply(preprocess_text)
+    except Exception as e:
+        print(f"An error occurred during text preprocessing: {e}")
+        return
+
     # Analyze sentiment
-    df['sentiment'] = df['review'].apply(analyze_sentiment_vader)
+    try:
+        df['sentiment'] = df['review'].apply(analyze_sentiment_vader)
+    except Exception as e:
+        print(f"An error occurred during sentiment analysis: {e}")
+        return
 
     # Create summary report
-    sentiment_summary = df['sentiment'].value_counts().reset_index()
-    sentiment_summary.columns = ['sentiment', 'count']
+    try:
+        sentiment_summary = df['sentiment'].value_counts().reset_index()
+        sentiment_summary.columns = ['sentiment', 'count']
+    except Exception as e:
+        print(f"An error occurred while creating the summary report: {e}")
+        return
 
     # Save processed data and summary report to CSV files
     save_to_csv(df, output_file)
