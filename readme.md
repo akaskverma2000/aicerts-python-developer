@@ -22,7 +22,7 @@ This repository contains a Python script for performing sentiment analysis on us
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your_username/sentiment-analysis-pipeline.git
+   git clone https://github.com/akashverma2000/aicerts-python-developer.git
    cd sentiment-analysis-pipeline
 2. Create and activate a virtual environment (optional but recommended):
 
